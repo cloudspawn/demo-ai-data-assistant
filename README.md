@@ -3,7 +3,7 @@
 Multi-agent AI system for accelerating Data Engineering workflows.
 
 ## Status
-🚧 In Development - Phase 1
+🚧 In Development - Phase 1 (SQL Generator + API)
 
 ## Stack
 - Python 3.12
@@ -16,6 +16,9 @@ Multi-agent AI system for accelerating Data Engineering workflows.
 
 ### ✅ Implemented
 - [x] SQL Query Generator (Agent 1)
+- [x] FastAPI REST API
+- [x] Health check endpoints
+- [x] Auto-generated Swagger UI
 
 ### 🚧 In Progress
 - [ ] Quality Check Generator (Agent 2)
@@ -48,23 +51,90 @@ uv sync
 # Copy environment template
 cp .env.example .env
 
-# Edit .env if needed (default uses localhost:11434)
+# Edit .env with your Ollama URL (default: localhost:11434)
+# If VM → PC setup: OLLAMA_BASE_URL=http://192.168.1.10:11434
 ```
 
-### Test SQL Generator Agent
+### Create Sample Data
 ```bash
-# Run the agent directly
+# Create sample DuckDB database
+uv run python scripts/create_sample_data.py
+```
+
+### Run API Server
+```bash
+# Start FastAPI server
+uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Test the API
+
+**Option 1: Swagger UI (Recommended)**
+```
+Open: http://localhost:8000/docs
+```
+
+**Option 2: curl**
+```bash
+# Health check
+curl http://localhost:8000/
+
+# Generate SQL
+curl -X POST http://localhost:8000/api/sql/generate \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Show me traffic trends in Paris"}'
+```
+
+**Option 3: Direct agent test**
+```bash
 uv run python -m agents.sql_generator
+```
+
+## API Endpoints
+
+### `GET /`
+Health check with Ollama connectivity status
+
+### `GET /health`
+Simple health check
+
+### `POST /api/sql/generate`
+Generate and execute SQL from natural language
+
+**Request:**
+```json
+{
+  "question": "Show me traffic trends in Paris last week"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "question": "Show me traffic trends in Paris last week",
+  "sql": "SELECT event_date, city, avg_value FROM analytics_events_daily WHERE city = 'Paris' AND category = 'traffic' ORDER BY event_date",
+  "results": [...],
+  "row_count": 3,
+  "explanation": "This query retrieves traffic trends for Paris..."
+}
 ```
 
 ## Project Structure
 ```
 demo-ai-data-assistant/
 ├── agents/              # AI Agents
-│   ├── sql_generator.py # Agent 1: SQL Generator
-│   └── ...             # More agents coming
+│   └── sql_generator.py # Agent 1: SQL Generator
+├── api/                 # FastAPI application
+│   ├── main.py         # App entry point
+│   ├── models.py       # Pydantic models
+│   └── routers/
+│       └── sql.py      # SQL endpoints
 ├── config/              # Configuration
 │   └── settings.py     # Pydantic settings
+├── scripts/             # Utility scripts
+│   └── create_sample_data.py
+├── data/                # Data files (gitignored)
 ├── .env.example        # Environment template
 └── pyproject.toml      # Dependencies
 ```
@@ -81,6 +151,19 @@ OLLAMA_MODEL=llama3.1
 If running on VM and Ollama on separate PC:
 ```bash
 OLLAMA_BASE_URL=http://192.168.x.x:11434  # Replace with PC IP
+```
+
+## Development
+
+### Run tests (coming soon)
+```bash
+uv run pytest
+```
+
+### Code formatting
+```bash
+uv run ruff check .
+uv run ruff format .
 ```
 
 ## License
