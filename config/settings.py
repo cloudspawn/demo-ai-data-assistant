@@ -1,10 +1,15 @@
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8"
+    )
     
     # LLM Provider (optional: "ollama" or "anthropic")
     llm_provider: Literal["ollama", "anthropic"] = "ollama"
@@ -26,10 +31,6 @@ class Settings(BaseSettings):
     
     # Project paths
     project_root: Path = Path(__file__).parent.parent
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 def load_settings() -> Settings:
