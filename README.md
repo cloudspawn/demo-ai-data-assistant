@@ -3,7 +3,7 @@
 Multi-agent AI system for accelerating Data Engineering workflows.
 
 ## Status
-🚧 In Development - Phase 1 (SQL Generator + API)
+🚧 In Development - Phase 1 Complete (SQL Generator + API + Tests)
 
 ## Stack
 - Python 3.12
@@ -11,6 +11,7 @@ Multi-agent AI system for accelerating Data Engineering workflows.
 - LangGraph (multi-agent orchestration)
 - Ollama + llama3.1 (local LLM)
 - DuckDB (data warehouse)
+- pytest (testing)
 
 ## Features
 
@@ -19,6 +20,8 @@ Multi-agent AI system for accelerating Data Engineering workflows.
 - [x] FastAPI REST API
 - [x] Health check endpoints
 - [x] Auto-generated Swagger UI
+- [x] Unit and integration tests
+- [x] Test fixtures and mocks
 
 ### 🚧 In Progress
 - [ ] Quality Check Generator (Agent 2)
@@ -90,6 +93,24 @@ curl -X POST http://localhost:8000/api/sql/generate \
 uv run python -m agents.sql_generator
 ```
 
+## Testing
+
+### Run all tests
+```bash
+uv run pytest
+```
+
+### Run specific test file
+```bash
+uv run pytest tests/test_sql_generator.py
+uv run pytest tests/test_api.py
+```
+
+### Run with coverage
+```bash
+uv run pytest --cov=agents --cov=api
+```
+
 ## API Endpoints
 
 ### `GET /`
@@ -132,6 +153,10 @@ demo-ai-data-assistant/
 │       └── sql.py      # SQL endpoints
 ├── config/              # Configuration
 │   └── settings.py     # Pydantic settings
+├── tests/               # Test suite
+│   ├── conftest.py     # Pytest fixtures
+│   ├── test_sql_generator.py
+│   └── test_api.py
 ├── scripts/             # Utility scripts
 │   └── create_sample_data.py
 ├── data/                # Data files (gitignored)
@@ -155,7 +180,7 @@ OLLAMA_BASE_URL=http://192.168.x.x:11434  # Replace with PC IP
 
 ## Development
 
-### Run tests (coming soon)
+### Run tests
 ```bash
 uv run pytest
 ```
