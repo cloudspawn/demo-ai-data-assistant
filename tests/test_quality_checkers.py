@@ -73,7 +73,7 @@ class TestQualityCheckerAgent:
         
         assert result["success"] is True
         assert result["table_name"] == "test_table"
-        assert result["schema"] == schema
+        assert result["table_schema"] == schema
         assert len(result["checks"]) >= 1
         assert result["check_count"] >= 1
         
