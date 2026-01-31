@@ -3,7 +3,7 @@
 Multi-agent AI system for accelerating Data Engineering workflows.
 
 ## Status
-🚧 In Development - Phase 1 Complete (SQL Generator + API + Tests)
+🚧 In Development - Phase 2 (SQL Generator + Quality Checker)
 
 ## Stack
 - Python 3.12
@@ -17,15 +17,14 @@ Multi-agent AI system for accelerating Data Engineering workflows.
 
 ### ✅ Implemented
 - [x] SQL Query Generator (Agent 1)
+- [x] Quality Check Generator (Agent 2)
 - [x] FastAPI REST API
 - [x] Health check endpoints
 - [x] Auto-generated Swagger UI
 - [x] Unit and integration tests
-- [x] Test fixtures and mocks
 
 ### 🚧 In Progress
-- [ ] Quality Check Generator (Agent 2)
-- [ ] Pipeline Debugger (Agent 3 - multi-agent)
+- [ ] Pipeline Debugger (Agent 3 - multi-agent with LangGraph)
 - [ ] Documentation Generator (Agent 4 - optional)
 
 ## Quick Start
@@ -49,13 +48,13 @@ git clone <your-repo-url>
 cd demo-ai-data-assistant
 
 # Install dependencies with uv
-uv sync
+uv sync --extra dev
 
 # Copy environment template
 cp .env.example .env
 
 # Edit .env with your Ollama URL (default: localhost:11434)
-# If VM → PC setup: OLLAMA_BASE_URL=http://192.168.1.10:11434
+# If VM → PC setup: OLLAMA_BASE_URL=http://192.168.x.x:11434
 ```
 
 ### Create Sample Data
@@ -86,11 +85,27 @@ curl http://localhost:8000/
 curl -X POST http://localhost:8000/api/sql/generate \
   -H "Content-Type: application/json" \
   -d '{"question": "Show me traffic trends in Paris"}'
+
+# Suggest quality checks
+curl -X POST http://localhost:8000/api/quality/suggest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "table_name": "analytics_events_daily",
+    "table_schema": {
+      "event_date": "DATE",
+      "city": "VARCHAR",
+      "event_count": "INTEGER"
+    }
+  }'
 ```
 
 **Option 3: Direct agent test**
 ```bash
+# Test SQL Generator
 uv run python -m agents.sql_generator
+
+# Test Quality Checker
+uv run python -m agents.quality_checker
 ```
 
 ## Testing
@@ -103,12 +118,8 @@ uv run pytest
 ### Run specific test file
 ```bash
 uv run pytest tests/test_sql_generator.py
+uv run pytest tests/test_quality_checker.py
 uv run pytest tests/test_api.py
-```
-
-### Run with coverage
-```bash
-uv run pytest --cov=agents --cov=api
 ```
 
 ## API Endpoints
@@ -133,11 +144,45 @@ Generate and execute SQL from natural language
 ```json
 {
   "success": true,
-  "question": "Show me traffic trends in Paris last week",
-  "sql": "SELECT event_date, city, avg_value FROM analytics_events_daily WHERE city = 'Paris' AND category = 'traffic' ORDER BY event_date",
+  "sql": "SELECT ...",
   "results": [...],
   "row_count": 3,
-  "explanation": "This query retrieves traffic trends for Paris..."
+  "explanation": "This query..."
+}
+```
+
+### `POST /api/quality/suggest`
+Generate data quality check suggestions from table schema
+
+**Request:**
+```json
+{
+  "table_name": "analytics_events_daily",
+  "table_schema": {
+    "event_date": "DATE",
+    "city": "VARCHAR",
+    "event_count": "INTEGER",
+    "avg_value": "DOUBLE"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "table_name": "analytics_events_daily",
+  "checks": [
+    {
+      "check_name": "event_date_not_null",
+      "column": "event_date",
+      "check_type": "null_check",
+      "severity": "critical",
+      "description": "event_date should never be NULL",
+      "python_code": "assert df['event_date'].notna().all()"
+    }
+  ],
+  "check_count": 5
 }
 ```
 
@@ -145,17 +190,20 @@ Generate and execute SQL from natural language
 ```
 demo-ai-data-assistant/
 ├── agents/              # AI Agents
-│   └── sql_generator.py # Agent 1: SQL Generator
+│   ├── sql_generator.py # Agent 1: SQL Generator
+│   └── quality_checker.py # Agent 2: Quality Checker
 ├── api/                 # FastAPI application
 │   ├── main.py         # App entry point
 │   ├── models.py       # Pydantic models
 │   └── routers/
-│       └── sql.py      # SQL endpoints
+│       ├── sql.py      # SQL endpoints
+│       └── quality.py  # Quality endpoints
 ├── config/              # Configuration
 │   └── settings.py     # Pydantic settings
 ├── tests/               # Test suite
 │   ├── conftest.py     # Pytest fixtures
 │   ├── test_sql_generator.py
+│   ├── test_quality_checker.py
 │   └── test_api.py
 ├── scripts/             # Utility scripts
 │   └── create_sample_data.py
@@ -175,7 +223,7 @@ OLLAMA_MODEL=llama3.1
 ### Network Setup (VM → PC with GPU)
 If running on VM and Ollama on separate PC:
 ```bash
-OLLAMA_BASE_URL=http://192.168.x.x:11434  # Replace with PC IP
+OLLAMA_BASE_URL=http://192.168.x.x:11434  # Replace x.x with PC IP
 ```
 
 ## Development

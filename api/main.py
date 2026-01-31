@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 import httpx
 
 from config.settings import load_settings
-from api.routers import sql
+from api.routers import sql, quality
 from api.models import HealthResponse
 
 
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AI Data Assistant API",
     description="Multi-agent AI system for accelerating Data Engineering workflows",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan
 )
 
@@ -46,6 +46,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(sql.router, prefix="/api")
+app.include_router(quality.router, prefix="/api")
 
 
 @app.get("/", response_model=HealthResponse)
@@ -68,7 +69,7 @@ async def health_check():
     
     return HealthResponse(
         status="healthy",
-        version="0.1.0",
+        version="0.2.0",
         ollama_connected=ollama_connected
     )
 

@@ -21,7 +21,7 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["version"] == "0.1.0"
+        assert data["version"] == "0.2.0"
         assert "ollama_connected" in data
     
     def test_simple_health_check(self):
@@ -115,3 +115,83 @@ class TestAPIDocumentation:
         
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
+
+class TestQualityEndpoints:
+    """Test suite for Quality Checker endpoints."""
+    
+    @patch('api.routers.quality.QualityCheckerAgent')
+    def test_suggest_checks_success(self, mock_agent_class):
+        """Test successful quality check suggestions."""
+        mock_agent = Mock()
+        mock_agent.suggest_checks.return_value = {
+            "success": True,
+            "table_name": "test_table",
+            "table_schema": {"col1": "VARCHAR"},
+            "checks": [
+                {
+                    "check_id": "test_table_check_1",
+                    "table_name": "test_table",
+                    "check_name": "col1_not_null",
+                    "column": "col1",
+                    "check_type": "null_check",
+                    "description": "Column should not be null",
+                    "severity": "critical",
+                    "python_code": "assert df['col1'].notna().all()",
+                    "raw_suggestion": {}
+                }
+            ],
+            "check_count": 1,
+            "raw_response": "Check suggestions"
+        }
+        mock_agent_class.return_value = mock_agent
+        
+        response = client.post(
+            "/api/quality/suggest",
+            json={
+                "table_name": "test_table",
+                "table_schema": {"col1": "VARCHAR"}
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["table_name"] == "test_table"
+        assert data["check_count"] == 1
+        assert len(data["checks"]) == 1
+    
+    def test_suggest_checks_invalid_request(self):
+        """Test quality check suggestions with invalid request."""
+        response = client.post(
+            "/api/quality/suggest",
+            json={"table_name": ""}  # Empty table name
+        )
+        
+        assert response.status_code == 422
+    
+    def test_suggest_checks_missing_schema(self):
+        """Test quality check suggestions with missing schema."""
+        response = client.post(
+            "/api/quality/suggest",
+            json={"table_name": "test"}  # Missing schema
+        )
+        
+        assert response.status_code == 422
+    
+    @patch('api.routers.quality.QualityCheckerAgent')
+    def test_suggest_checks_agent_error(self, mock_agent_class):
+        """Test quality check suggestions when agent raises error."""
+        mock_agent = Mock()
+        mock_agent.suggest_checks.side_effect = Exception("Agent error")
+        mock_agent_class.return_value = mock_agent
+        
+        response = client.post(
+            "/api/quality/suggest",
+            json={
+                "table_name": "test_table",
+                "table_schema": {"col1": "VARCHAR"}
+            }
+        )
+        
+        assert response.status_code == 500
+        assert "Error generating quality checks" in response.json()["detail"]
