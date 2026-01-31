@@ -195,3 +195,76 @@ class TestQualityEndpoints:
         
         assert response.status_code == 500
         assert "Error generating quality checks" in response.json()["detail"]
+
+class TestDebuggerEndpoints:
+    """Test suite for Pipeline Debugger endpoints."""
+    
+    @patch('api.routers.debugger.PipelineDebuggerAgent')
+    def test_debug_pipeline_success(self, mock_agent_class):
+        """Test successful pipeline debugging."""
+        mock_agent = Mock()
+        mock_agent.debug_pipeline.return_value = {
+            "success": True,
+            "error_log": "PermissionError",
+            "diagnosis": {
+                "error_type": "PermissionError",
+                "root_cause": "File permissions issue"
+            },
+            "solution": {
+                "steps": "Fix permissions",
+                "commands": ["sudo chown airflow file"],
+                "explanation": "This fixes the permissions"
+            },
+            "prevention": "Set correct permissions",
+            "agent_workflow": ["Step 1", "Step 2"]
+        }
+        mock_agent_class.return_value = mock_agent
+        
+        response = client.post(
+            "/api/debug/pipeline",
+            json={
+                "error_log": "PermissionError: Permission denied",
+                "dag_code": "with open('file') as f: pass"
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["diagnosis"]["error_type"] == "PermissionError"
+        assert len(data["solution"]["commands"]) > 0
+    
+    def test_debug_pipeline_invalid_request(self):
+        """Test pipeline debugging with invalid request."""
+        response = client.post(
+            "/api/debug/pipeline",
+            json={"error_log": ""}  # Too short
+        )
+        
+        assert response.status_code == 422
+    
+    def test_debug_pipeline_missing_error_log(self):
+        """Test pipeline debugging with missing error_log."""
+        response = client.post(
+            "/api/debug/pipeline",
+            json={}
+        )
+        
+        assert response.status_code == 422
+    
+    @patch('api.routers.debugger.PipelineDebuggerAgent')
+    def test_debug_pipeline_agent_error(self, mock_agent_class):
+        """Test pipeline debugging when agent raises error."""
+        mock_agent = Mock()
+        mock_agent.debug_pipeline.side_effect = Exception("Agent error")
+        mock_agent_class.return_value = mock_agent
+        
+        response = client.post(
+            "/api/debug/pipeline",
+            json={
+                "error_log": "PermissionError: Permission denied"
+            }
+        )
+        
+        assert response.status_code == 500
+        assert "Error debugging pipeline" in response.json()["detail"]    
