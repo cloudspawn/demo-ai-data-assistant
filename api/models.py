@@ -75,6 +75,49 @@ class QualityCheckSuggestResponse(BaseModel):
     error: Optional[str] = Field(None, description="Error message if operation failed")
 
 
+class DebugPipelineRequest(BaseModel):
+    """Request model for pipeline debugging."""
+    
+    error_log: str = Field(
+        ...,
+        description="Error log from pipeline failure",
+        min_length=10,
+        examples=["[2026-01-25] ERROR - PermissionError: Permission denied"]
+    )
+    dag_code: str = Field(
+        default="",
+        description="Optional DAG code for analysis",
+        examples=["from airflow import DAG\n..."]
+    )
+
+
+class Diagnosis(BaseModel):
+    """Diagnosis information."""
+    
+    error_type: str = Field(..., description="Type of error identified")
+    root_cause: str = Field(..., description="Root cause analysis")
+
+
+class Solution(BaseModel):
+    """Solution information."""
+    
+    steps: str = Field(..., description="Step-by-step solution")
+    commands: List[str] = Field(..., description="Commands to fix the issue")
+    explanation: str = Field(..., description="Why this solution works")
+
+
+class DebugPipelineResponse(BaseModel):
+    """Response model for pipeline debugging."""
+    
+    success: bool = Field(..., description="Whether the operation succeeded")
+    error_log: str = Field(..., description="Original error log")
+    diagnosis: Diagnosis = Field(..., description="Error diagnosis")
+    solution: Solution = Field(..., description="Proposed solution")
+    prevention: str = Field(..., description="How to prevent this in the future")
+    agent_workflow: List[str] = Field(..., description="Steps taken by agents")
+    error: Optional[str] = Field(None, description="Error message if operation failed")
+
+
 class HealthResponse(BaseModel):
     """Response model for health check."""
     
