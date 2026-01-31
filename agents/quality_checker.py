@@ -83,20 +83,20 @@ class QualityCheckerAgent:
         
         return checks if checks else [{"description": response, "type": "general"}]
     
-    def suggest_checks(self, table_name: str, schema: Dict[str, str]) -> Dict[str, Any]:
+    def suggest_checks(self, table_name: str, table_schema: Dict[str, str]) -> Dict[str, Any]:
         """
         Generate quality check suggestions for a table schema.
         
         Args:
             table_name: Name of the table
-            schema: Dictionary mapping column names to data types
+            table_schema: Dictionary mapping column names to data types
             
         Returns:
             Dictionary containing quality check suggestions
         """
         # Build schema description
         schema_description = f"Table: {table_name}\nColumns:\n"
-        for col_name, col_type in schema.items():
+        for col_name, col_type in table_schema.items():
             schema_description += f"  - {col_name}: {col_type}\n"
         
         # Build prompt
@@ -146,7 +146,7 @@ Generate quality checks:"""
             return {
                 "success": True,
                 "table_name": table_name,
-                "schema": table_schema,
+                "table_schema": table_schema,
                 "checks": enhanced_checks,
                 "check_count": len(enhanced_checks),
                 "raw_response": llm_response
@@ -156,7 +156,7 @@ Generate quality checks:"""
             return {
                 "success": False,
                 "table_name": table_name,
-                "schema": table_schema,
+                "table_schema": table_schema,
                 "error": str(e),
                 "checks": []
             }
@@ -171,7 +171,7 @@ def main():
     
     # Test schema
     table_name = "analytics_events_daily"
-    schema = {
+    table_schema = {
         "event_date": "DATE",
         "city": "VARCHAR",
         "category": "VARCHAR",
@@ -182,7 +182,7 @@ def main():
     print(f"Generating quality checks for: {table_name}")
     print("-" * 80)
     
-    result = agent.suggest_checks(table_name, schema)
+    result = agent.suggest_checks(table_name, table_schema)
     
     if result["success"]:
         print(f"\n✅ Generated {result['check_count']} quality checks:\n")
