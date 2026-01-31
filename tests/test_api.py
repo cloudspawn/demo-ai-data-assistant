@@ -21,7 +21,7 @@ class TestHealthEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["version"] == "0.1.0"
+        assert data["version"] == "0.2.0"
         assert "ollama_connected" in data
     
     def test_simple_health_check(self):
@@ -126,7 +126,7 @@ class TestQualityEndpoints:
         mock_agent.suggest_checks.return_value = {
             "success": True,
             "table_name": "test_table",
-            "schema": {"col1": "VARCHAR"},
+            "table_schema": {"col1": "VARCHAR"},
             "checks": [
                 {
                     "check_id": "test_table_check_1",
@@ -149,7 +149,7 @@ class TestQualityEndpoints:
             "/api/quality/suggest",
             json={
                 "table_name": "test_table",
-                "schema": {"col1": "VARCHAR"}
+                "table_schema": {"col1": "VARCHAR"}
             }
         )
         
@@ -189,7 +189,7 @@ class TestQualityEndpoints:
             "/api/quality/suggest",
             json={
                 "table_name": "test_table",
-                "schema": {"col1": "VARCHAR"}
+                "table_schema": {"col1": "VARCHAR"}
             }
         )
         

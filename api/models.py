@@ -38,7 +38,7 @@ class QualityCheckSuggestRequest(BaseModel):
         min_length=1,
         examples=["analytics_events_daily"]
     )
-    schema: Dict[str, str] = Field(
+    table_schema: Dict[str, str] = Field(
         ...,
         description="Table schema as column_name: data_type mapping",
         examples=[{
@@ -68,7 +68,7 @@ class QualityCheckSuggestResponse(BaseModel):
     
     success: bool = Field(..., description="Whether the operation succeeded")
     table_name: str = Field(..., description="Table name")
-    schema: Dict[str, str] = Field(..., description="Table schema")
+    table_schema: Dict[str, str] = Field(..., description="Table schema")
     checks: List[QualityCheck] = Field(..., description="List of suggested quality checks")
     check_count: int = Field(..., description="Number of checks generated")
     raw_response: Optional[str] = Field(None, description="Raw LLM response")

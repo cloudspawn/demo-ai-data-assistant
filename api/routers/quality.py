@@ -37,7 +37,7 @@ async def suggest_quality_checks(
         List of suggested quality checks with descriptions and code examples
     """
     try:
-        result = agent.suggest_checks(request.table_name, request.schema)
+        result = agent.suggest_checks(request.table_name, request.table_schema)
         return QualityCheckSuggestResponse(**result)
     
     except Exception as e:

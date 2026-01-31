@@ -146,7 +146,7 @@ Generate quality checks:"""
             return {
                 "success": True,
                 "table_name": table_name,
-                "schema": schema,
+                "schema": table_schema,
                 "checks": enhanced_checks,
                 "check_count": len(enhanced_checks),
                 "raw_response": llm_response
@@ -156,7 +156,7 @@ Generate quality checks:"""
             return {
                 "success": False,
                 "table_name": table_name,
-                "schema": schema,
+                "schema": table_schema,
                 "error": str(e),
                 "checks": []
             }

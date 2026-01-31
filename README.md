@@ -91,7 +91,7 @@ curl -X POST http://localhost:8000/api/quality/suggest \
   -H "Content-Type: application/json" \
   -d '{
     "table_name": "analytics_events_daily",
-    "schema": {
+    "table_schema": {
       "event_date": "DATE",
       "city": "VARCHAR",
       "event_count": "INTEGER"
@@ -158,7 +158,7 @@ Generate data quality check suggestions from table schema
 ```json
 {
   "table_name": "analytics_events_daily",
-  "schema": {
+  "table_schema": {
     "event_date": "DATE",
     "city": "VARCHAR",
     "event_count": "INTEGER",
