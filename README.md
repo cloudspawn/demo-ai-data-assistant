@@ -3,7 +3,7 @@
 Multi-agent AI system for accelerating Data Engineering workflows.
 
 ## Status
-🚧 In Development - Phase 2 (SQL Generator + Quality Checker)
+🚧 In Development - Phase 3 Complete (SQL + Quality + Multi-Agent Debugger)
 
 ## Stack
 - Python 3.12
@@ -18,13 +18,13 @@ Multi-agent AI system for accelerating Data Engineering workflows.
 ### ✅ Implemented
 - [x] SQL Query Generator (Agent 1)
 - [x] Quality Check Generator (Agent 2)
+- [x] Pipeline Debugger (Agent 3 - Multi-agent with LangGraph)
 - [x] FastAPI REST API
 - [x] Health check endpoints
 - [x] Auto-generated Swagger UI
-- [x] Unit and integration tests
+- [x] Full test coverage (41 tests)
 
 ### 🚧 In Progress
-- [ ] Pipeline Debugger (Agent 3 - multi-agent with LangGraph)
 - [ ] Documentation Generator (Agent 4 - optional)
 
 ## Quick Start
@@ -97,6 +97,14 @@ curl -X POST http://localhost:8000/api/quality/suggest \
       "event_count": "INTEGER"
     }
   }'
+
+# Debug pipeline error
+curl -X POST http://localhost:8000/api/debug/pipeline \
+  -H "Content-Type: application/json" \
+  -d '{
+    "error_log": "PermissionError: Permission denied",
+    "dag_code": "with open(\"/path/file\") as f: pass"
+  }'
 ```
 
 **Option 3: Direct agent test**
@@ -106,6 +114,9 @@ uv run python -m agents.sql_generator
 
 # Test Quality Checker
 uv run python -m agents.quality_checker
+
+# Test Pipeline Debugger
+uv run python -m agents.debugger
 ```
 
 ## Testing
@@ -119,6 +130,7 @@ uv run pytest
 ```bash
 uv run pytest tests/test_sql_generator.py
 uv run pytest tests/test_quality_checker.py
+uv run pytest tests/test_debugger.py
 uv run pytest tests/test_api.py
 ```
 
@@ -186,24 +198,85 @@ Generate data quality check suggestions from table schema
 }
 ```
 
+### `POST /api/debug/pipeline`
+Debug data pipeline errors using multi-agent analysis (LangGraph)
+
+**Request:**
+```json
+{
+  "error_log": "[2026-01-25] ERROR - PermissionError: Permission denied: '/opt/airflow/data/raw/events.csv'",
+  "dag_code": "from airflow import DAG\n\ndef extract_data():\n    with open('/opt/airflow/data/raw/events.csv', 'r') as f:\n        data = f.read()"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "diagnosis": {
+    "error_type": "PermissionError",
+    "root_cause": "File permissions issue..."
+  },
+  "solution": {
+    "steps": "1. Change ownership...",
+    "commands": ["sudo chown airflow:airflow /opt/airflow/data/raw"],
+    "explanation": "This fixes the permissions..."
+  },
+  "prevention": "Set correct permissions from start...",
+  "agent_workflow": [
+    "Log Analyzer: Identified PermissionError",
+    "Code Checker: Analyzed code...",
+    "Solution Generator: Generated fix"
+  ]
+}
+```
+
+## Architecture
+
+### Multi-Agent System (Pipeline Debugger)
+
+The Pipeline Debugger uses **LangGraph** to orchestrate 3 specialized agents:
+```
+Error Log + DAG Code
+        ↓
+┌─────────────────┐
+│ Log Analyzer    │ → Identifies error type
+└─────────────────┘
+        ↓
+┌─────────────────┐
+│ Code Checker    │ → Analyzes root cause
+└─────────────────┘
+        ↓
+┌─────────────────┐
+│Solution Generator│ → Proposes fix + commands
+└─────────────────┘
+        ↓
+  Diagnosis + Solution
+```
+
+Each agent specializes in one task, improving accuracy and quality of responses.
+
 ## Project Structure
 ```
 demo-ai-data-assistant/
 ├── agents/              # AI Agents
 │   ├── sql_generator.py # Agent 1: SQL Generator
-│   └── quality_checker.py # Agent 2: Quality Checker
+│   ├── quality_checker.py # Agent 2: Quality Checker
+│   └── debugger.py      # Agent 3: Pipeline Debugger (LangGraph)
 ├── api/                 # FastAPI application
 │   ├── main.py         # App entry point
 │   ├── models.py       # Pydantic models
 │   └── routers/
 │       ├── sql.py      # SQL endpoints
-│       └── quality.py  # Quality endpoints
+│       ├── quality.py  # Quality endpoints
+│       └── debugger.py # Debugger endpoints
 ├── config/              # Configuration
 │   └── settings.py     # Pydantic settings
-├── tests/               # Test suite
+├── tests/               # Test suite (41 tests)
 │   ├── conftest.py     # Pytest fixtures
 │   ├── test_sql_generator.py
 │   ├── test_quality_checker.py
+│   ├── test_debugger.py
 │   └── test_api.py
 ├── scripts/             # Utility scripts
 │   └── create_sample_data.py
@@ -238,6 +311,32 @@ uv run pytest
 uv run ruff check .
 uv run ruff format .
 ```
+
+## What I Learned
+
+### Multi-Agent Orchestration
+- Built a LangGraph-powered multi-agent system
+- Each agent specializes in one task (separation of concerns)
+- Agents share state and collaborate sequentially
+- Better results than single large prompts
+
+### LLM Integration
+- Integrated Ollama for local, cost-free LLM inference
+- Prompt engineering for structured outputs
+- Parsing and validating LLM responses
+- Error handling and fallback strategies
+
+### API Design
+- RESTful API with FastAPI
+- Pydantic models for request/response validation
+- Dependency injection for settings and agents
+- Auto-generated OpenAPI documentation
+
+### Testing Strategy
+- Unit tests with mocked LLM calls
+- Integration tests for end-to-end workflows
+- Test fixtures for reusable test data
+- 41 tests covering all agents and endpoints
 
 ## License
 MIT
