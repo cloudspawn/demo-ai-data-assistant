@@ -4,6 +4,8 @@ Create sample DuckDB database for testing.
 
 import duckdb
 from pathlib import Path
+from datetime import datetime, timedelta
+import random
 
 
 def create_sample_database():
@@ -29,26 +31,57 @@ def create_sample_database():
         )
     """)
     
-    # Insert sample data
-    conn.execute("""
-        INSERT INTO analytics_events_daily VALUES
-        ('2026-01-18', 'Paris', 'traffic', 1500, 75.5),
-        ('2026-01-18', 'Lyon', 'traffic', 800, 68.2),
-        ('2026-01-19', 'Paris', 'traffic', 1600, 78.3),
-        ('2026-01-19', 'Lyon', 'traffic', 850, 70.1),
-        ('2026-01-20', 'Paris', 'weather', 2000, 15.5),
-        ('2026-01-20', 'Lyon', 'weather', 1200, 12.3),
-        ('2026-01-21', 'Paris', 'traffic', 1550, 76.8),
-        ('2026-01-21', 'Lyon', 'traffic', 820, 69.5)
-    """)
+    # Clear existing data
+    conn.execute("DELETE FROM analytics_events_daily")
+    
+    # Generate richer dataset
+    cities = ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice']
+    categories = ['traffic', 'weather', 'mobility', 'energy']
+    
+    # Generate 60 days of data
+    start_date = datetime(2026, 1, 1)
+    
+    for day_offset in range(60):
+        current_date = start_date + timedelta(days=day_offset)
+        date_str = current_date.strftime('%Y-%m-%d')
+        
+        for city in cities:
+            for category in categories:
+                # Generate realistic values based on category
+                if category == 'traffic':
+                    base_value = 70 + random.randint(-10, 15)
+                    event_count = random.randint(800, 2000)
+                elif category == 'weather':
+                    base_value = random.randint(5, 25)  # Temperature
+                    event_count = random.randint(500, 1500)
+                elif category == 'mobility':
+                    base_value = random.randint(60, 90)
+                    event_count = random.randint(1000, 3000)
+                else:  # energy
+                    base_value = random.randint(40, 80)
+                    event_count = random.randint(600, 1800)
+                
+                conn.execute("""
+                    INSERT INTO analytics_events_daily VALUES
+                    (?, ?, ?, ?, ?)
+                """, [date_str, city, category, event_count, base_value])
     
     # Verify data
     result = conn.execute("SELECT COUNT(*) as count FROM analytics_events_daily").fetchone()
     print(f"✅ Created sample_warehouse.duckdb with {result[0]} rows")
     
-    # Show tables
-    tables = conn.execute("SHOW TABLES").fetchall()
-    print(f"✅ Tables: {[t[0] for t in tables]}")
+    # Show sample stats
+    stats = conn.execute("""
+        SELECT 
+            COUNT(DISTINCT city) as cities,
+            COUNT(DISTINCT category) as categories,
+            MIN(event_date) as first_date,
+            MAX(event_date) as last_date
+        FROM analytics_events_daily
+    """).fetchone()
+    
+    print(f"✅ Cities: {stats[0]}, Categories: {stats[1]}")
+    print(f"✅ Date range: {stats[2]} to {stats[3]}")
     
     conn.close()
 
