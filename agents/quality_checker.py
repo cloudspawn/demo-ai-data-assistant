@@ -47,9 +47,9 @@ class QualityCheckerAgent:
         except Exception as e:
             raise Exception(f"Error calling Ollama: {str(e)}")
     
-    def _parse_checks_response(self, response: str) -> List[Dict[str, Any]]:
+    def _parse_checks_response_v2(self, response: str) -> List[Dict[str, Any]]:
         """
-        Parse LLM response to extract quality checks.
+        Improved parser for LLM response.
         
         Args:
             response: Raw response from LLM
@@ -57,28 +57,78 @@ class QualityCheckerAgent:
         Returns:
             List of quality check suggestions
         """
-        # Simple parsing - in production, use structured output
         checks = []
         lines = response.strip().split('\n')
         
         current_check = {}
+        in_code_block = False
+        code_lines = []
+        
         for line in lines:
             line = line.strip()
             
-            if line.startswith('- ') or line.startswith('* '):
-                # New check item
-                if current_check:
+            # Skip empty lines between checks
+            if not line:
+                if current_check and 'description' in current_check:
+                    # Save accumulated code
+                    if code_lines:
+                        current_check['python_code'] = '\n'.join(code_lines).strip()
                     checks.append(current_check)
-                current_check = {"description": line[2:].strip()}
+                    current_check = {}
+                    code_lines = []
+                    in_code_block = False
+                continue
             
-            elif ':' in line and current_check:
-                # Property of current check
-                key, value = line.split(':', 1)
-                key = key.strip().lower().replace(' ', '_')
-                current_check[key] = value.strip()
+            # New check marker
+            if line.upper().startswith('CHECK'):
+                if current_check and 'description' in current_check:
+                    if code_lines:
+                        current_check['python_code'] = '\n'.join(code_lines).strip()
+                    checks.append(current_check)
+                    current_check = {}
+                    code_lines = []
+                    in_code_block = False
+                continue
+            
+            # Parse fields
+            if ':' in line:
+                parts = line.split(':', 1)
+                key = parts[0].strip().lower()
+                value = parts[1].strip()
+                
+                if 'check name' in key or 'name' in key:
+                    current_check['check_name'] = value
+                    in_code_block = False
+                elif 'column' in key:
+                    current_check['column'] = value
+                    in_code_block = False
+                elif 'type' in key:
+                    current_check['type'] = value
+                    in_code_block = False
+                elif 'severity' in key:
+                    current_check['severity'] = value.lower()
+                    in_code_block = False
+                elif 'description' in key:
+                    current_check['description'] = value
+                    in_code_block = False
+                elif 'python code' in key or 'code' in key:
+                    in_code_block = True
+                    if value and value != ':':
+                        code_lines.append(value)
+            
+            # Collect code lines
+            elif in_code_block:
+                # Skip markdown code blocks
+                if line.startswith('```'):
+                    continue
+                # Add actual code lines
+                if line and not line.startswith('#'):
+                    code_lines.append(line)
         
-        # Add last check
-        if current_check:
+        # Don't forget last check
+        if current_check and 'description' in current_check:
+            if code_lines:
+                current_check['python_code'] = '\n'.join(code_lines).strip()
             checks.append(current_check)
         
         return checks if checks else [{"description": response, "type": "general"}]
@@ -99,33 +149,39 @@ class QualityCheckerAgent:
         for col_name, col_type in table_schema.items():
             schema_description += f"  - {col_name}: {col_type}\n"
         
-        # Build prompt
-        prompt = f"""You are a data quality expert. Given the following database table schema, suggest data quality checks.
+        # Build prompt - SIMPLIFIÉ et PLUS CLAIR
+        prompt = f"""You are a data quality expert. Analyze this table schema and suggest quality checks.
 
 {schema_description}
 
-For each column, suggest:
-1. Null checks (should it allow nulls?)
-2. Value range checks (min/max, allowed values)
-3. Format checks (patterns, constraints)
-4. Relationship checks (foreign keys, uniqueness)
+For each column, suggest specific quality checks with Python code.
 
-Provide practical, actionable quality checks. Format each check as:
-- Check name: [name]
-  Column: [column_name]
-  Type: [null_check, range_check, format_check, uniqueness_check]
-  Description: [what to check]
-  Severity: [critical, high, medium, low]
-  Python code: [example assertion or check]
+Return your suggestions in this EXACT format (one check per block):
 
-Generate quality checks:"""
+CHECK 1:
+Check name: event_date_not_null
+Column: event_date
+Type: null_check
+Severity: critical
+Description: Event date should never be NULL
+Python code: assert df['event_date'].notna().all()
+
+CHECK 2:
+Check name: event_count_positive
+Column: event_count
+Type: range_check
+Severity: high
+Description: Event count must be greater than 0
+Python code: assert (df['event_count'] > 0).all()
+
+Now generate quality checks for this table:"""
         
         try:
             # Call LLM
             llm_response = self._call_ollama(prompt)
             
-            # Parse response
-            checks = self._parse_checks_response(llm_response)
+            # Parse response with improved parser
+            checks = self._parse_checks_response_v2(llm_response)
             
             # Enhance checks with default structure
             enhanced_checks = []
@@ -192,6 +248,7 @@ def main():
             print(f"  Type: {check['check_type']}")
             print(f"  Severity: {check['severity']}")
             print(f"  Description: {check['description']}")
+            print(f"  Python code: {check['python_code']}")
             print()
     else:
         print(f"\n❌ Error: {result['error']}")
