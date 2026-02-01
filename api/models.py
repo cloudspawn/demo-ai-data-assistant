@@ -13,7 +13,11 @@ class SQLGenerateRequest(BaseModel):
         ...,
         description="Natural language question about the data",
         min_length=3,
-        examples=["Show me traffic trends in Paris last week"]
+        examples=[
+            "Show me traffic trends in Paris for the last 30 days",
+            "Compare average mobility between all cities",
+            "Which city has the highest energy consumption?"
+        ]
     )
 
 
@@ -36,7 +40,7 @@ class QualityCheckSuggestRequest(BaseModel):
         ...,
         description="Name of the table to check",
         min_length=1,
-        examples=["analytics_events_daily"]
+        examples=["analytics_events_daily", "users", "transactions"]
     )
     table_schema: Dict[str, str] = Field(
         ...,
@@ -44,10 +48,11 @@ class QualityCheckSuggestRequest(BaseModel):
         examples=[{
             "event_date": "DATE",
             "city": "VARCHAR",
-            "event_count": "INTEGER"
+            "category": "VARCHAR",
+            "event_count": "INTEGER",
+            "avg_value": "DOUBLE"
         }]
     )
-
 
 class QualityCheck(BaseModel):
     """Individual quality check suggestion."""
@@ -82,14 +87,20 @@ class DebugPipelineRequest(BaseModel):
         ...,
         description="Error log from pipeline failure",
         min_length=10,
-        examples=["[2026-01-25] ERROR - PermissionError: Permission denied"]
+        examples=[
+            "[2026-01-25] ERROR - PermissionError: [Errno 13] Permission denied: '/opt/airflow/data/raw/events.csv'",
+            "[2026-01-26] ERROR - ModuleNotFoundError: No module named 'pandas'",
+            "[2026-01-27] ERROR - ConnectionError: Failed to connect to database"
+        ]
     )
     dag_code: str = Field(
         default="",
         description="Optional DAG code for analysis",
-        examples=["from airflow import DAG\n..."]
+        examples=[
+            "from airflow import DAG\n\ndef extract_data():\n    with open('/opt/airflow/data/raw/events.csv', 'r') as f:\n        data = f.read()",
+            "import pandas as pd\n\ndf = pd.read_csv('data.csv')"
+        ]
     )
-
 
 class Diagnosis(BaseModel):
     """Diagnosis information."""

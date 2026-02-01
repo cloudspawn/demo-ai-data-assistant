@@ -59,9 +59,13 @@ cp .env.example .env
 
 ### Create Sample Data
 ```bash
-# Create sample DuckDB database
+# Create sample DuckDB database with enriched dataset
 uv run python scripts/create_sample_data.py
 ```
+
+**Note:** The script generates 1200 rows of data (60 days × 5 cities × 4 categories). This enriched dataset enables more interesting demo queries like "Show me traffic trends in Paris for the last 30 days".
+
+If you prefer a minimal setup, you can modify the script to generate fewer rows, but demo examples in Swagger UI are designed for the enriched dataset.
 
 ### Run API Server
 ```bash
